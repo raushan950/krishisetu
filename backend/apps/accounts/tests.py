@@ -138,3 +138,24 @@ class AuthenticationTests(APITestCase):
         # Buyer accessing farmer profile -> 403 FORBIDDEN
         response = self.client.get(self.farmer_profile_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class HealthCheckTests(APITestCase):
+    def test_health_check_confirms_database_connectivity(self):
+        response = self.client.get(reverse('health_check'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'status': 'ok'})
+
+    def test_temporary_frontend_origin_is_allowed_for_api_requests(self):
+        response = self.client.options(
+            reverse('auth_login'),
+            HTTP_ORIGIN='https://instant-geode-9y9nkbl.tmp.now',
+            HTTP_ACCESS_CONTROL_REQUEST_METHOD='POST',
+            HTTP_ACCESS_CONTROL_REQUEST_HEADERS='content-type',
+        )
+
+        self.assertEqual(
+            response['Access-Control-Allow-Origin'],
+            'https://instant-geode-9y9nkbl.tmp.now',
+        )

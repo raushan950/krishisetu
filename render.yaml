@@ -10,7 +10,8 @@ services:
     runtime: python
     rootDir: backend
     buildCommand: "./build.sh"
-    startCommand: "gunicorn krishisetu.wsgi:application"
+    startCommand: "gunicorn krishisetu.wsgi:application --bind 0.0.0.0:$PORT"
+    healthCheckPath: /api/v1/health/
     plan: free
     envVars:
       - key: DATABASE_URL

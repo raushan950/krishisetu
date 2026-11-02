@@ -18,6 +18,12 @@ KrishiSetu is an AI-powered agricultural market intelligence and farmer-buyer di
 - **One-Click Render Backend Deployment:** [https://render.com/deploy?repo=https://github.com/raushan950/krishisetu](https://render.com/deploy?repo=https://github.com/raushan950/krishisetu)
 - **GitHub Repository:** [https://github.com/raushan950/krishisetu](https://github.com/raushan950/krishisetu)
 
+For Vercel deployments, set `VITE_API_URL` to the Render API base URL, including `/api/v1`
+(currently `https://krishisetu-api-70rj.onrender.com/api/v1`). The frontend uses this URL
+in production by default and supports overriding it if the Render service URL changes.
+Render starts Gunicorn on its assigned `$PORT` and checks `/api/v1/health/` for service
+and database readiness.
+
 ---
 
 ## Demo Accounts for Jury Evaluation
@@ -100,3 +106,6 @@ npm run dev
 ```
 
 Open `http://localhost:5173` in your browser.
+
+For local builds that need a non-default API URL, copy `.env.example` to `.env.local` and
+set `VITE_API_URL` to the API base URL ending in `/api/v1`.
