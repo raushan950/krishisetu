@@ -6,13 +6,13 @@ import {
   ShoppingCart,
   ShieldCheck,
   MapPin,
-  Calendar,
   CheckCircle,
   Clock,
   RefreshCw,
-  TrendingUp,
-  Package,
-  Layers
+  Layers,
+  Database,
+  Building,
+  AlertCircle
 } from 'lucide-react';
 
 const DashboardPage = () => {
@@ -20,15 +20,18 @@ const DashboardPage = () => {
   const [profileData, setProfileData] = useState(user);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSynced, setLastSynced] = useState(new Date().toLocaleTimeString());
+  const [syncError, setSyncError] = useState('');
 
   const refreshProfile = async () => {
     setIsRefreshing(true);
+    setSyncError('');
     try {
       const res = await axiosClient.get('/auth/me/');
       setProfileData(res.data);
       setLastSynced(new Date().toLocaleTimeString());
     } catch (err) {
       console.error('Failed to reload profile:', err);
+      setSyncError('Could not sync latest profile from backend.');
     } finally {
       setIsRefreshing(false);
     }
@@ -38,12 +41,20 @@ const DashboardPage = () => {
     setProfileData(user);
   }, [user]);
 
-  const farmerProfile = profileData?.farmer_profile;
-  const buyerProfile = profileData?.buyer_profile;
+  // Robust profile resolution: supports both role-specific and unified profile keys
+  const farmerProfile = profileData?.farmer_profile || (isFarmer ? profileData?.profile : null);
+  const buyerProfile = profileData?.buyer_profile || (isBuyer ? profileData?.profile : null);
 
   return (
     <div className="flex-1 bg-slate-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {syncError && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-800 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{syncError}</span>
+          </div>
+        )}
+
         {/* Welcome Top Card */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -58,7 +69,7 @@ const DashboardPage = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Welcome, {profileData?.full_name}!
+                  Welcome, {profileData?.full_name || 'User'}!
                 </h1>
                 <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                   isFarmer ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
@@ -97,14 +108,14 @@ const DashboardPage = () => {
             <div>
               <div className="inline-flex items-center gap-1.5 bg-emerald-800/90 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-md mb-2">
                 <CheckCircle className="w-4 h-4 text-emerald-400" />
-                Phase 1 Active: Authentication & Core Architecture
+                Phase 1 Active: Authentication & Core Architecture Verified
               </div>
               <h2 className="text-lg font-bold text-white">
-                PostgreSQL Database & SimpleJWT Handshake Verified
+                PostgreSQL & Stateless SimpleJWT Handshake Active
               </h2>
               <p className="text-xs text-emerald-200 mt-1 max-w-2xl leading-relaxed">
-                Your user session is authenticated via stateless JWT tokens with role-based permission enforcement.
-                UUID Primary Keys and role profiles are active in PostgreSQL.
+                Your user session is validated with JWT tokens and role-based permissions.
+                Profile synchronization between Django REST Framework and React is operational.
               </p>
             </div>
             <div className="bg-emerald-800/60 border border-emerald-700 p-3 rounded-xl text-center min-w-[160px]">
@@ -179,6 +190,23 @@ const DashboardPage = () => {
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="text-[10px] font-semibold text-slate-500 uppercase">Market Tier</div>
                   <div className="text-sm font-bold text-emerald-700 mt-0.5">Verified Commercial</div>
+                </div>
+              </div>
+            )}
+
+            {isAdmin && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase">Role Type</div>
+                  <div className="text-sm font-bold text-amber-800 mt-0.5">Platform Administrator</div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase">Staff Access</div>
+                  <div className="text-sm font-bold text-slate-800 mt-0.5">Enabled (Django Admin)</div>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <div className="text-[10px] font-semibold text-slate-500 uppercase">Superuser Status</div>
+                  <div className="text-sm font-bold text-slate-800 mt-0.5">Active</div>
                 </div>
               </div>
             )}

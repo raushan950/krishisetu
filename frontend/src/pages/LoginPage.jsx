@@ -16,13 +16,13 @@ const LoginPage = () => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
+    if (!email.trim() || !password) {
+      setErrorMsg('Please enter both email address and password.');
       return;
     }
 
     setLoading(true);
-    const result = await login(email, password);
+    const result = await login(email.trim().toLowerCase(), password);
     setLoading(false);
 
     if (result.success) {
@@ -39,6 +39,9 @@ const LoginPage = () => {
     } else if (demoRole === 'BUYER') {
       setEmail('sharma.traders@example.com');
       setPassword('BuyerPassword@123');
+    } else if (demoRole === 'ADMIN') {
+      setEmail('admin@krishisetu.gov.in');
+      setPassword('AdminPassword@123');
     }
     setErrorMsg('');
   };
@@ -61,20 +64,27 @@ const LoginPage = () => {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
             Hackathon Demo Quick-Fill
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => handleDemoFill('FARMER')}
-              className="text-xs bg-white hover:bg-emerald-100/70 border border-emerald-300 text-emerald-800 py-1.5 px-2.5 rounded-lg font-medium transition-colors cursor-pointer text-left shadow-2xs"
+              className="text-xs bg-white hover:bg-emerald-100/70 border border-emerald-300 text-emerald-800 py-1.5 px-2 rounded-lg font-medium transition-colors cursor-pointer text-center shadow-2xs"
             >
-              🧑‍🌾 Farmer Login
+              🧑‍🌾 Farmer
             </button>
             <button
               type="button"
               onClick={() => handleDemoFill('BUYER')}
-              className="text-xs bg-white hover:bg-emerald-100/70 border border-emerald-300 text-emerald-800 py-1.5 px-2.5 rounded-lg font-medium transition-colors cursor-pointer text-left shadow-2xs"
+              className="text-xs bg-white hover:bg-emerald-100/70 border border-emerald-300 text-emerald-800 py-1.5 px-2 rounded-lg font-medium transition-colors cursor-pointer text-center shadow-2xs"
             >
-              🏪 Buyer Login
+              🏪 Buyer
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDemoFill('ADMIN')}
+              className="text-xs bg-white hover:bg-emerald-100/70 border border-emerald-300 text-emerald-800 py-1.5 px-2 rounded-lg font-medium transition-colors cursor-pointer text-center shadow-2xs"
+            >
+              🛡️ Admin
             </button>
           </div>
         </div>

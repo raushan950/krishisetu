@@ -180,13 +180,13 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     origin.strip() for origin in os.getenv(
         'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173'
+        'http://localhost:5173,http://127.0.0.1:5173,https://instant-geode-9y9nkbl.tmp.now,https://instant-geode-9y9nkbl-raushan-kumars-projects-fed41dec.vercel.app'
     ).split(',') if origin.strip()
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https:\/\/.*\.vercel\.app$",
-    r"^https:\/\/instant-geode-9y9nkbl\.tmp\.now$",
+    r"^https:\/\/.*\.tmp\.now$",
     r"^http:\/\/localhost:\d+$",
     r"^http:\/\/127\.0\.0\.1:\d+$",
 ]
@@ -196,6 +196,7 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
     'https://*.vercel.app',
+    'https://*.tmp.now',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
 ]

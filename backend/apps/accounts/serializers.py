@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser, FarmerProfile, BuyerProfile
 
@@ -26,16 +25,28 @@ class BuyerProfileSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    """
+    Unified user detail serializer used across login, registration, and /auth/me/.
+    Provides both explicit role profile accessors and a unified 'profile' field.
+    """
     farmer_profile = FarmerProfileSerializer(read_only=True)
     buyer_profile = BuyerProfileSerializer(read_only=True)
+    profile = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomUser
         fields = [
             'id', 'email', 'phone', 'full_name', 'role',
-            'is_active', 'created_at', 'farmer_profile', 'buyer_profile'
+            'is_active', 'created_at', 'farmer_profile', 'buyer_profile', 'profile'
         ]
         read_only_fields = ['id', 'email', 'role', 'is_active', 'created_at']
+
+    def get_profile(self, obj):
+        if obj.role == CustomUser.Role.FARMER and hasattr(obj, 'farmer_profile'):
+            return FarmerProfileSerializer(obj.farmer_profile).data
+        elif obj.role == CustomUser.Role.BUYER and hasattr(obj, 'buyer_profile'):
+            return BuyerProfileSerializer(obj.buyer_profile).data
+        return None
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -60,10 +71,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id']
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError({"password": "Passwords do not match."})
+        if 'email' in attrs:
+            attrs['email'] = attrs['email'].strip().lower()
+        if 'phone' in attrs:
+            attrs['phone'] = attrs['phone'].strip()
+        if 'full_name' in attrs:
+            attrs['full_name'] = attrs['full_name'].strip()
 
-        # Ensure role is valid
+        if attrs.get('password') != attrs.get('password_confirm'):
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+
+        # Ensure role is valid (Admin cannot self-register through this endpoint)
         if attrs.get('role') not in [CustomUser.Role.FARMER, CustomUser.Role.BUYER]:
             raise serializers.ValidationError({"role": "Role must be either FARMER or BUYER."})
 
@@ -71,13 +89,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')
-        village = validated_data.pop('village', '')
-        district = validated_data.pop('district', '')
-        state = validated_data.pop('state', '')
+        village = validated_data.pop('village', '').strip()
+        district = validated_data.pop('district', '').strip()
+        state = validated_data.pop('state', '').strip()
         farm_size_acres = validated_data.pop('farm_size_acres', None)
-        business_name = validated_data.pop('business_name', '')
+        business_name = validated_data.pop('business_name', '').strip()
         buyer_type = validated_data.pop('buyer_type', BuyerProfile.BuyerType.WHOLESALER)
-        gstin = validated_data.pop('gstin', '')
+        gstin = validated_data.pop('gstin', '').strip()
 
         password = validated_data.pop('password')
         user = CustomUser.objects.create_user(
@@ -85,48 +103,46 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             **validated_data
         )
 
-        # Update initial profile created by post_save signal
+        # Update initial profile (idempotent with post_save signal)
         if user.role == CustomUser.Role.FARMER:
-            profile = user.farmer_profile
-            profile.village = village
-            profile.district = district
-            profile.state = state
-            if farm_size_acres:
+            profile, _ = FarmerProfile.objects.get_or_create(user=user)
+            if village:
+                profile.village = village
+            if district:
+                profile.district = district
+            if state:
+                profile.state = state
+            if farm_size_acres is not None:
                 profile.farm_size_acres = farm_size_acres
             profile.save()
         elif user.role == CustomUser.Role.BUYER:
-            profile = user.buyer_profile
+            profile, _ = BuyerProfile.objects.get_or_create(user=user)
             profile.business_name = business_name or user.full_name
-            profile.district = district
-            profile.state = state
-            profile.gstin = gstin
+            if district:
+                profile.district = district
+            if state:
+                profile.state = state
+            if gstin:
+                profile.gstin = gstin
             if buyer_type in BuyerProfile.BuyerType.values:
                 profile.buyer_type = buyer_type
             profile.save()
 
+        # Reload updated relations from DB so in-memory cache reflects newly saved fields
+        user.refresh_from_db()
         return user
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
-    Enhanced SimpleJWT serializer that embeds user identity, role, and profile summary in the response.
+    Enhanced SimpleJWT serializer that normalizes email, authenticates,
+    and returns a standardized UserDetailSerializer payload alongside JWT tokens.
     """
     def validate(self, attrs):
+        if 'email' in attrs:
+            attrs['email'] = attrs['email'].strip().lower()
+
         data = super().validate(attrs)
-
-        data['user'] = {
-            'id': str(self.user.id),
-            'email': self.user.email,
-            'phone': self.user.phone,
-            'full_name': self.user.full_name,
-            'role': self.user.role,
-        }
-
-        if self.user.role == CustomUser.Role.FARMER and hasattr(self.user, 'farmer_profile'):
-            data['user']['profile'] = FarmerProfileSerializer(self.user.farmer_profile).data
-        elif self.user.role == CustomUser.Role.BUYER and hasattr(self.user, 'buyer_profile'):
-            data['user']['profile'] = BuyerProfileSerializer(self.user.buyer_profile).data
-        else:
-            data['user']['profile'] = None
-
+        # Unified user schema identical to /auth/me/ and /auth/register/
+        data['user'] = UserDetailSerializer(self.user).data
         return data

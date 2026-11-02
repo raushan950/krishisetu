@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Sprout, Tractor, ShoppingCart, User, Mail, Phone, Lock, MapPin, Building, AlertCircle, ArrowRight } from 'lucide-react';
+import { Sprout, Tractor, ShoppingCart, User, Mail, Phone, Lock, MapPin, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 
 const RegisterPage = () => {
   const [role, setRole] = useState('FARMER');
@@ -32,21 +32,93 @@ const RegisterPage = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleQuickFill = (targetRole) => {
+    setRole(targetRole);
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const randPhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+
+    if (targetRole === 'FARMER') {
+      setFormData({
+        full_name: `Kisan Ramesh ${rand}`,
+        email: `kisan.${rand}@krishisetu.in`,
+        phone: randPhone,
+        password: 'KisanPassword@123',
+        password_confirm: 'KisanPassword@123',
+        village: 'Pipliya Mandi',
+        district: 'Neemuch',
+        state: 'Madhya Pradesh',
+        farm_size_acres: '8.5',
+        business_name: '',
+        buyer_type: 'WHOLESALER',
+        gstin: '',
+      });
+    } else {
+      setFormData({
+        full_name: `Trader Suresh ${rand}`,
+        email: `trader.${rand}@krishisetu.in`,
+        phone: randPhone,
+        password: 'BuyerPassword@123',
+        password_confirm: 'BuyerPassword@123',
+        village: '',
+        district: 'Indore',
+        state: 'Madhya Pradesh',
+        farm_size_acres: '',
+        business_name: `Agro Commercials ${rand} Ltd`,
+        buyer_type: 'WHOLESALER',
+        gstin: '23ABCDE1234F1Z5',
+      });
+    }
+    setErrorMsg('');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Pre-flight validation
+    if (formData.password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+
+    if (/^\d+$/.test(formData.password)) {
+      setErrorMsg('Password cannot be entirely numeric.');
+      return;
+    }
 
     if (formData.password !== formData.password_confirm) {
       setErrorMsg('Passwords do not match.');
       return;
     }
 
+    const cleanPhone = formData.phone.trim();
+    if (!/^\d{10}$/.test(cleanPhone)) {
+      setErrorMsg('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+
     setLoading(true);
+
+    // Build role-isolated payload to match Django serializers cleanly
     const payload = {
-      ...formData,
+      full_name: formData.full_name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phone: cleanPhone,
+      password: formData.password,
+      password_confirm: formData.password_confirm,
       role,
-      farm_size_acres: role === 'FARMER' && formData.farm_size_acres ? parseFloat(formData.farm_size_acres) : null,
+      district: formData.district.trim(),
+      state: formData.state.trim(),
     };
+
+    if (role === 'FARMER') {
+      payload.village = formData.village.trim();
+      payload.farm_size_acres = formData.farm_size_acres ? parseFloat(formData.farm_size_acres) : null;
+    } else if (role === 'BUYER') {
+      payload.business_name = formData.business_name.trim();
+      payload.buyer_type = formData.buyer_type;
+      payload.gstin = formData.gstin.trim();
+    }
 
     const result = await register(payload);
     setLoading(false);
@@ -68,6 +140,30 @@ const RegisterPage = () => {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Create KrishiSetu Account</h1>
           <p className="text-emerald-100 text-xs mt-1">Select your role to start trading with fair prices</p>
+        </div>
+
+        {/* SIH Hackathon Quick-Fill Bar */}
+        <div className="p-3.5 bg-emerald-50/70 border-b border-emerald-100 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-900">
+            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+            <span>Hackathon Evaluation Quick-Fill:</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickFill('FARMER')}
+              className="text-xs bg-white hover:bg-emerald-100 border border-emerald-300 text-emerald-800 py-1 px-2.5 rounded-lg font-medium cursor-pointer transition-colors shadow-2xs"
+            >
+              🧑‍🌾 Test Farmer
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickFill('BUYER')}
+              className="text-xs bg-white hover:bg-emerald-100 border border-emerald-300 text-emerald-800 py-1 px-2.5 rounded-lg font-medium cursor-pointer transition-colors shadow-2xs"
+            >
+              🏪 Test Buyer
+            </button>
+          </div>
         </div>
 
         {/* Role Selection Tabs */}
@@ -144,7 +240,7 @@ const RegisterPage = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Phone Number *
+                Mobile Number *
               </label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -152,9 +248,10 @@ const RegisterPage = () => {
                   type="tel"
                   name="phone"
                   required
+                  maxLength={10}
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="9876543210"
+                  placeholder="9812345678"
                   className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
@@ -192,10 +289,11 @@ const RegisterPage = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Min 6 characters"
+                  placeholder="Min 6 characters (not all numbers)"
                   className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-hidden"
                 />
               </div>
+              <p className="text-[11px] text-slate-500 mt-1">Must be at least 6 characters, alphanumeric.</p>
             </div>
 
             <div>
@@ -238,10 +336,11 @@ const RegisterPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">District</label>
+                  <label className="block text-xs text-slate-600 mb-1">District *</label>
                   <input
                     type="text"
                     name="district"
+                    required
                     value={formData.district}
                     onChange={handleChange}
                     placeholder="Neemuch"
@@ -264,10 +363,11 @@ const RegisterPage = () => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">Business Name</label>
+                  <label className="block text-xs text-slate-600 mb-1">Business Name *</label>
                   <input
                     type="text"
                     name="business_name"
+                    required
                     value={formData.business_name}
                     onChange={handleChange}
                     placeholder="Sharma Grain Merchants"

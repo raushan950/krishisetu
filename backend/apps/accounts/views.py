@@ -19,7 +19,7 @@ class RegisterView(generics.CreateAPIView):
     """
     POST /api/v1/auth/register/
     Public registration endpoint for Farmers and Buyers.
-    Automatically generates JWT tokens upon successful registration.
+    Generates JWT tokens immediately upon successful registration.
     """
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -31,16 +31,18 @@ class RegisterView(generics.CreateAPIView):
 
         # Generate JWT tokens for immediate authentication
         refresh = RefreshToken.for_user(user)
-
+        access_token = str(refresh.access_token)
         user_data = UserDetailSerializer(user).data
 
         return Response(
             {
                 "message": f"Account successfully created for {user.full_name}.",
                 "user": user_data,
+                "access": access_token,
+                "refresh": str(refresh),
                 "tokens": {
                     "refresh": str(refresh),
-                    "access": str(refresh.access_token),
+                    "access": access_token,
                 }
             },
             status=status.HTTP_201_CREATED
@@ -50,7 +52,7 @@ class RegisterView(generics.CreateAPIView):
 class CustomLoginView(TokenObtainPairView):
     """
     POST /api/v1/auth/login/
-    Public login endpoint returning JWT tokens and user profile metadata.
+    Public login endpoint returning JWT tokens and standardized user metadata.
     """
     serializer_class = CustomTokenObtainPairSerializer
     permission_classes = [permissions.AllowAny]
