@@ -1,0 +1,25 @@
+databases:
+  - name: krishisetu-db
+    databaseName: krishisetu_db
+    user: krishisetu_user
+    plan: free
+
+services:
+  - type: web
+    name: krishisetu-api
+    runtime: python
+    rootDir: backend
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn krishisetu.wsgi:application"
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: krishisetu-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: PYTHON_VERSION
+        value: "3.12.10"
