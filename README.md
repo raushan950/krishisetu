@@ -14,7 +14,8 @@ KrishiSetu is an AI-powered agricultural market intelligence and farmer-buyer di
 
 ## Live Deployments
 
-- **Frontend (Vercel Live):** [https://instant-geode-9y9nkbl.tmp.now](https://instant-geode-9y9nkbl.tmp.now) *(Claimable to your Vercel account)*
+- **Frontend (Vercel):** [https://instant-geode-9y9nkbl.tmp.now](https://instant-geode-9y9nkbl.tmp.now)
+- **Backend API (Render):** [https://krishisetu-api-70rj.onrender.com](https://krishisetu-api-70rj.onrender.com)
 - **One-Click Render Backend Deployment:** [https://render.com/deploy?repo=https://github.com/raushan950/krishisetu](https://render.com/deploy?repo=https://github.com/raushan950/krishisetu)
 - **GitHub Repository:** [https://github.com/raushan950/krishisetu](https://github.com/raushan950/krishisetu)
 
